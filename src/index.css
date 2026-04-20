@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Georgia", serif;
+  --font-mono: "Courier New", Courier, monospace;
+  --color-gold: #C5A059;
+  --color-card: #14161A;
+  --color-panel: #181B1F;
+}
+
+:root {
+  --bg-dark: #0A0B0D;
+  --bg-sidebar: #0D0F12;
+  --bg-card: #14161A;
+  --bg-panel: #181B1F;
+  --border-dim: #1F2937;
+  --border-gold: rgba(197, 160, 89, 0.3);
+  --text-main: #E5E7EB;
+  --text-muted: #6B7280;
+  --accent-gold: #C5A059;
+  --accent-green: #10B981;
+  --accent-red: #EF4444;
+  --accent-blue: #3B82F6;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.gold-text {
+  color: var(--accent-gold);
+}
+.bg-card {
+  background-color: var(--bg-card);
+}
+.border-gold {
+  border: 1px solid var(--border-gold);
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  display: inline-block;
+  margin-right: 6px;
+}
+
+/* Redefine glass-panel to match theme cards */
+.glass-panel {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 0.25rem;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4B5563;
+}
+
+/* Hide scrollbar completely but allow scroll */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe areas for iOS */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Monospace stats */
+.font-mono-data {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.glow-green {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+.glow-red {
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+.glow-gold {
+  text-shadow: 0 0 10px rgba(197, 160, 89, 0.4);
+}
+

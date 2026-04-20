@@ -1,0 +1,9 @@
+{
+  "name": "OSRS Crypto Exchange",
+  "description": "Sophisticated investment platform bridging Crypto (BTC, ETH, USDC) and OSRS Gold with real-time analytics, Gemini AI Chat, AI image generation, admin controls, and robust security features.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": []
+}
