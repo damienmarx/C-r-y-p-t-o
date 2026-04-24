@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, cn } from "../lib/utils";
-import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X } from "lucide-react";
+import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X, Lock } from "lucide-react";
 import { Chatbot } from "./Chatbot";
 
 export function Layout() {
@@ -15,7 +15,8 @@ export function Layout() {
     { name: "Exchange", href: "/exchange", icon: LineChart },
     { name: "Rally Tokens", href: "/tokens", icon: Coins },
     { name: "Referral", href: "/referral", icon: Share2 },
-    ...(user?.role === "ADMIN" ? [{ name: "Admin Portal", href: "/admin", icon: Shield }] : [])
+    { name: "Settings", href: "/settings", icon: Wallet },
+    { name: "Admin Portal", href: "/admin", icon: Shield, requiresAdmin: true }
   ];
 
   return (
@@ -63,18 +64,22 @@ export function Layout() {
             <nav className="space-y-2">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.href;
+                const isLocked = item.requiresAdmin && user?.role !== "ADMIN";
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-3 md:py-2 rounded transition-colors border active:scale-[0.98]",
+                      "flex items-center justify-between px-3 py-3 md:py-2 rounded transition-colors border active:scale-[0.98]",
                       isActive ? "bg-[#181B1F] text-white border-[#1F2937] shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]" : "text-[#6B7280] border-transparent hover:text-[#E5E7EB] hover:bg-[#14161A] hover:border-[#1F2937]"
                     )}
                   >
-                    <item.icon className={cn("w-4 h-4", isActive ? "gold-text" : "text-[#6B7280]")} /> 
-                    <span className="text-[10px] font-semibold uppercase tracking-widest">{item.name}</span>
+                    <div className="flex items-center gap-3">
+                      <item.icon className={cn("w-4 h-4", isActive ? "gold-text" : "text-[#6B7280]")} /> 
+                      <span className="text-[10px] font-semibold uppercase tracking-widest">{item.name}</span>
+                    </div>
+                    {isLocked && <Lock className="w-3 h-3 text-[#6B7280]" />}
                   </Link>
                 );
               })}

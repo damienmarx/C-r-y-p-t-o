@@ -6,6 +6,7 @@ import { Exchange } from "./pages/Exchange";
 import { Admin } from "./pages/Admin";
 import { CustomTokenGen } from "./pages/CustomTokenGen";
 import { Referral } from "./pages/Referral";
+import { Settings } from "./pages/Settings";
 import { AuthProvider } from "./context/AuthContext";
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="tokens" element={<CustomTokenGen />} />
             <Route path="referral" element={<Referral />} />
             <Route path="admin" element={<Admin />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>
