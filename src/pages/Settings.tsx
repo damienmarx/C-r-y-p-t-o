@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { User, Key, Bell, Save, Plus, Copy, Eye, EyeOff, Trash2 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -13,9 +13,7 @@ export function Settings() {
     displayName: user?.username || '',
   });
 
-  const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string}[]>([
-    { id: "1", name: "Trading Bot Alpha", key: "sk_osrs_live_8f93j2m4...", created: "2026-01-14T08:00:00Z" }
-  ]);
+  const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string}[]>([]);
   
   const [notifications, setNotifications] = useState({
     tradeExecutions: true,
@@ -26,24 +24,59 @@ export function Settings() {
 
   const [showKeyId, setShowKeyId] = useState<string | null>(null);
 
+  const fetchKeys = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/keys?userId=${user.id}`);
+      if (res.ok) {
+         const data = await res.json();
+         setApiKeys(data);
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (activeTab === "API_KEYS") fetchKeys();
+  }, [activeTab, fetchKeys]);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock save
     alert("Configuration state saved securely.");
   };
 
-  const generateApiKey = () => {
-    const newKey = {
-      id: Math.random().toString(36).substring(7),
-      name: `External Integration ${apiKeys.length + 1}`,
-      key: `sk_osrs_live_${Math.random().toString(36).substring(2)}${Math.random().toString(36).substring(2)}`,
-      created: new Date().toISOString()
-    };
-    setApiKeys([...apiKeys, newKey]);
+  const generateApiKey = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch("/api/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id })
+      });
+      if (res.ok) {
+        const newKey = await res.json();
+        setApiKeys([...apiKeys, newKey]);
+      }
+    } catch(e) {
+      console.error(e);
+    }
   };
 
-  const revokeKey = (id: string) => {
-    setApiKeys(apiKeys.filter(k => k.id !== id));
+  const revokeKey = async (id: string) => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/keys/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id })
+      });
+      if (res.ok) {
+        setApiKeys(apiKeys.filter(k => k.id !== id));
+      }
+    } catch(e) {
+      console.error(e);
+    }
   };
 
   return (

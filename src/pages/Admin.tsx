@@ -7,7 +7,10 @@ export function Admin() {
   const { user } = useAuth();
   const [systemData, setSystemData] = useState<{ logs: any[], users: any[], transactions: any[] } | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<"TRANSCRIPTION" | "USERS">("TRANSCRIPTION");
+  const [activeTab, setActiveTab] = useState<"TRANSCRIPTION" | "USERS" | "INFRA" | "MARKETS">("TRANSCRIPTION");
+  const [infraData, setInfraData] = useState<any>(null);
+  const [marketData, setMarketData] = useState<Record<string, number>>({});
+  const [newAsset, setNewAsset] = useState({ asset: "", price: "" });
 
   const fetchSystemData = () => {
     if (user?.role !== "ADMIN") {
@@ -19,6 +22,16 @@ export function Admin() {
       .then(r => r.json())
       .then(d => setSystemData({ logs: d.auditLogs || [], users: d.users || [], transactions: d.transactions || [] }))
       .catch(e => console.error(e));
+
+    fetch(`/api/admin/infrastructure?userId=${user.id}`)
+      .then(r => r.json())
+      .then(d => setInfraData(d))
+      .catch(console.error);
+
+    fetch(`/api/market`)
+      .then(r => r.json())
+      .then(d => setMarketData(d))
+      .catch(console.error);
   }
 
   useEffect(() => {
@@ -34,6 +47,26 @@ export function Admin() {
         userId: user.id,
         updates: { users: [{ id: userId, role: newRole }] }
       })
+    });
+    if (res.ok) fetchSystemData();
+  };
+
+  const handleUpdateMarketAsset = async (asset: string, price: string) => {
+    if (!user) return;
+    const res = await fetch("/api/admin/market", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, asset, price })
+    });
+    if (res.ok) fetchSystemData();
+  };
+
+  const handleDeleteMarketAsset = async (asset: string) => {
+    if (!user) return;
+    const res = await fetch(`/api/admin/market/${asset}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id })
     });
     if (res.ok) fetchSystemData();
   };
@@ -80,6 +113,18 @@ export function Admin() {
           className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "USERS" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-white shadow-[0_-5px_15px_rgba(255,255,255,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
         >
           <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Global Demographics & Config</div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("INFRA")}
+          className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "INFRA" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-white shadow-[0_-5px_15px_rgba(255,255,255,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
+        >
+          <div className="flex items-center gap-2"><Database className="w-4 h-4" /> Node Infrastructure</div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("MARKETS")}
+          className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "MARKETS" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-white shadow-[0_-5px_15px_rgba(255,255,255,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
+        >
+          <div className="flex items-center gap-2"><Activity className="w-4 h-4" /> Global Liquidity Pools</div>
         </button>
       </div>
 
@@ -153,6 +198,109 @@ export function Admin() {
                      </div>
                      
                    </div>
+                 </div>
+               ))}
+             </div>
+           </div>
+        )}
+        {activeTab === "INFRA" && infraData && (
+           <div className="p-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="bg-[#0A0B0D] p-6 rounded-xl border border-[#1F2937]">
+                 <h3 className="text-sm font-serif font-bold text-white tracking-widest mb-4">Server Node</h3>
+                 <div className="space-y-4 font-mono text-xs">
+                   <div className="flex justify-between border-b border-[#1F2937] pb-2">
+                     <span className="text-[#6B7280]">ENVIRONMENT</span>
+                     <span className="text-[#10B981]">{infraData.environment}</span>
+                   </div>
+                   <div className="flex justify-between border-b border-[#1F2937] pb-2">
+                     <span className="text-[#6B7280]">PORT BINDING</span>
+                     <span className="text-white">{infraData.port}</span>
+                   </div>
+                   <div className="flex justify-between border-b border-[#1F2937] pb-2">
+                     <span className="text-[#6B7280]">DATABASE URI</span>
+                     <span className="text-[#C5A059]">{infraData.databaseUrl}</span>
+                   </div>
+                 </div>
+               </div>
+
+               <div className="bg-[#0A0B0D] p-6 rounded-xl border border-[#1F2937]">
+                 <h3 className="text-sm font-serif font-bold text-white tracking-widest mb-4">Proxy / Tunnel</h3>
+                 <div className="space-y-4 font-mono text-xs">
+                   <div className="flex justify-between border-b border-[#1F2937] pb-2">
+                     <span className="text-[#6B7280]">PUBLIC DOMAIN</span>
+                     <span className="text-[#3B82F6]">{infraData.tunnelUrl}</span>
+                   </div>
+                   <div className="flex justify-between border-b border-[#1F2937] pb-2">
+                     <span className="text-[#6B7280]">CF TUNNEL ID</span>
+                     <span className="text-white">{infraData.tunnelId}</span>
+                   </div>
+                 </div>
+               </div>
+
+               <div className="bg-[#0A0B0D] p-6 rounded-xl border border-[#1F2937] md:col-span-2">
+                 <h3 className="text-sm font-serif font-bold text-white tracking-widest mb-4">Hardware Utilization (VPS)</h3>
+                 <div className="space-y-4 font-mono text-xs">
+                   <div className="flex justify-between border-b border-[#1F2937] pb-2">
+                     <span className="text-[#6B7280]">CPU</span>
+                     <span className="text-[#10B981]">{infraData.vpsCPU}</span>
+                   </div>
+                   <div className="flex justify-between border-b border-[#1F2937] pb-2">
+                     <span className="text-[#6B7280]">MEMORY</span>
+                     <span className="text-[#C5A059]">{infraData.vpsMemory}</span>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           </div>
+        )}
+
+        {activeTab === "MARKETS" && (
+           <div className="p-6">
+             <div className="mb-6 bg-[#0A0B0D]/80 backdrop-blur-lg border border-[#1F2937] rounded-xl p-6">
+               <h3 className="text-lg font-serif font-bold text-white tracking-widest mb-4">Configure Asset Peg</h3>
+               <div className="flex flex-col md:flex-row gap-4 items-end">
+                 <div className="flex-1 w-full">
+                   <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Asset Ticker</label>
+                   <input 
+                     value={newAsset.asset} 
+                     onChange={e => setNewAsset({...newAsset, asset: e.target.value})}
+                     placeholder="e.g. SOL"
+                     className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono uppercase" 
+                   />
+                 </div>
+                 <div className="flex-1 w-full">
+                   <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Price (USD)</label>
+                   <input 
+                     value={newAsset.price} 
+                     onChange={e => setNewAsset({...newAsset, price: e.target.value})}
+                     placeholder="e.g. 150.00"
+                     className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono" 
+                   />
+                 </div>
+                 <button 
+                   onClick={() => handleUpdateMarketAsset(newAsset.asset.toUpperCase(), newAsset.price)}
+                   className="w-full md:w-auto flex items-center justify-center gap-2 border border-[#10B981] text-[#10B981] hover:bg-[#10B981]/10 font-bold tracking-widest px-6 py-3 rounded transition uppercase text-[10px]"
+                 >
+                   <Send className="w-4 h-4" /> Deploy Peg
+                 </button>
+               </div>
+             </div>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+               {Object.entries(marketData).map(([asset, price]) => (
+                 <div key={asset} className="bg-[#181B1F] p-4 rounded-xl border border-[#1F2937] flex flex-col justify-between">
+                   <div className="flex justify-between items-center mb-4">
+                     <span className="text-xl font-bold text-white font-mono">{asset}</span>
+                     <button 
+                       onClick={() => handleDeleteMarketAsset(asset)}
+                       className="text-[#EF4444] hover:text-[#EF4444]/70 p-1"
+                       title="Delist Asset"
+                     >
+                       <AlertTriangle className="w-4 h-4" />
+                     </button>
+                   </div>
+                   <div className="text-[#10B981] font-mono text-lg">{formatCurrency(price)}</div>
                  </div>
                ))}
              </div>

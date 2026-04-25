@@ -6,8 +6,8 @@ import crypto from "crypto";
 // In-memory Database for Demonstration
 const db = {
   users: [
-    { id: "admin-1", username: "admin", role: "ADMIN", balances: { BTC: 5.2, ETH: 100, OSRS: 500000000, USD: 250000 } },
-    { id: "user-1", username: "trader_joe", role: "USER", balances: { BTC: 0.5, USDC: 10000, OSRS: 1000000 } }
+    { id: "admin-1", username: "admin", role: "ADMIN", balances: { BTC: 5.2, ETH: 100, OSRS: 500000000, USD: 250000 }, apiKeys: [{ id: "1", name: "Trading Bot Alpha", key: "sk_osrs_live_8f93j2m41xyz", created: "2026-01-14T08:00:00Z" }] },
+    { id: "user-1", username: "trader_joe", role: "USER", balances: { BTC: 0.5, USDC: 10000, OSRS: 1000000 }, apiKeys: [] }
   ],
   transactions: [] as any[],
   auditLogs: [] as any[],
@@ -96,6 +96,93 @@ async function startServer() {
     if (!userId) return res.status(400).json({ error: "Missing userId" });
     const userTxs = db.transactions.filter(t => t.userId === String(userId));
     res.json(userTxs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10)); // send latest 10 returning array
+  });
+
+  router.get("/keys", (req, res) => {
+    const { userId } = req.query;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    res.json(user.apiKeys || []);
+  });
+
+  router.post("/keys", (req, res) => {
+    const { userId } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    
+    if (!user.apiKeys) user.apiKeys = [];
+    const newKey = {
+      id: crypto.randomBytes(8).toString("hex"),
+      name: `Integration Node ${user.apiKeys.length + 1}`,
+      key: `sk_osrs_live_${crypto.randomBytes(16).toString("hex")}`,
+      created: new Date().toISOString()
+    };
+    user.apiKeys.push(newKey);
+    res.json(newKey);
+  });
+
+  router.delete("/keys/:id", (req, res) => {
+    const { userId } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    
+    if (user.apiKeys) {
+       user.apiKeys = user.apiKeys.filter(k => k.id !== req.params.id);
+    }
+    res.json({ success: true });
+  });
+
+  router.get("/admin/infrastructure", (req, res) => {
+    const { userId } = req.query;
+    const user = db.users.find(u => u.id === userId);
+    if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
+    
+    // Send mocked VPS and env configs
+    res.json({
+      environment: process.env.NODE_ENV || "development",
+      port: process.env.PORT || 3000,
+      databaseUrl: process.env.DATABASE_URL ? "Configured (Hidden)" : "Missing / Not Configured",
+      tunnelUrl: process.env.PUBLIC_DOMAIN || "Missing / Not Configured",
+      tunnelId: process.env.CLOUDFLARE_TUNNEL_ID ? "Configured (Hidden)" : "Missing / Not Configured",
+      vpsMemory: "16GB Allocated (8% usage)",
+      vpsCPU: "8 Cores (1.2% usage)"
+    });
+  });
+
+  router.post("/admin/market", (req, res) => {
+    const { userId, asset, price } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
+
+    db.marketPrices[asset as keyof typeof db.marketPrices] = Number(price);
+
+    db.auditLogs.unshift({
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      action: "MARKET_ASSET_MODIFIED",
+      details: `Admin force updated asset ${asset} to peg ${price}`,
+      severity: "WARNING"
+    });
+
+    res.json(db.marketPrices);
+  });
+
+  router.delete("/admin/market/:asset", (req, res) => {
+    const { userId } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
+
+    delete (db.marketPrices as any)[req.params.asset];
+    
+    db.auditLogs.unshift({
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      action: "MARKET_ASSET_DELETED",
+      details: `Admin deleted asset ${req.params.asset} from global liquidity pool`,
+      severity: "CRITICAL"
+    });
+
+    res.json(db.marketPrices);
   });
 
   router.get("/admin/system", (req, res) => {
