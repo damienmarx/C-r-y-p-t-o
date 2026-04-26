@@ -8,13 +8,14 @@ export function Settings() {
   const [activeTab, setActiveTab] = useState<"ACCOUNT" | "API_KEYS" | "NOTIFICATIONS">("ACCOUNT");
   const [globalThemes, setGlobalThemes] = useState<any[]>([]);
   
-  // Mock Settings State
+  // Active Local State
   const [accountState, setAccountState] = useState({
     email: `${user?.username || 'user'}@osrs-crypto.net`,
     displayName: user?.username || '',
     osrsUsername: user?.osrsUsername || '',
     discordId: user?.discordId || '',
     theme: user?.theme || 'default',
+    banner: user?.banner || '',
   });
 
   useEffect(() => {
@@ -60,7 +61,8 @@ export function Settings() {
            userId: user.id,
            osrsUsername: accountState.osrsUsername,
            discordId: accountState.discordId,
-           theme: accountState.theme
+           theme: accountState.theme,
+           banner: accountState.banner
          })
       });
       if (res.ok) {
@@ -197,6 +199,15 @@ export function Settings() {
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Banner Image URL</label>
+              <input 
+                value={accountState.banner} 
+                onChange={e => setAccountState({...accountState, banner: e.target.value})}
+                className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono"
+                placeholder="https://..."
+              />
             </div>
             <button type="submit" className="flex items-center gap-2 border border-gold text-[#C5A059] bg-[#C5A059]/5 hover:bg-[#C5A059]/10 font-serif tracking-widest px-6 py-3 rounded transition uppercase text-[10px]">
               <Save className="w-4 h-4" /> Commit Identity Changes

@@ -9,11 +9,12 @@ interface User {
   discordId?: string;
   theme?: string;
   tier?: string;
+  banner?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string) => void;
+  login: (osrsUsername: string, accessKey?: string) => void;
   logout: () => void;
   refreshBalances: () => void;
   updateUser: (user: User) => void;
@@ -21,16 +22,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const MOCK_USERS: Record<string, User> = {
-  admin: { id: "admin-1", username: "admin", role: "ADMIN", balances: { BTC: 5.2, ETH: 100, OSRS: 500000000, USD: 250000 }, tier: "Diamond", theme: "default", osrsUsername: "", discordId: "" },
-  trader_joe: { id: "user-1", username: "trader_joe", role: "USER", balances: { BTC: 0.5, USDC: 10000, OSRS: 1000000 }, tier: "Bronze", theme: "default", osrsUsername: "Zezima", discordId: "joe#1234" }
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(MOCK_USERS.trader_joe); // auto-login for prototype
+  const [user, setUser] = useState<User | null>(null);
 
-  const login = (username: string) => {
-    setUser(MOCK_USERS[username] || null);
+  const login = async (osrsUsername: string, accessKey?: string) => {
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ osrsUsername, accessKey })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Login failed");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Network Error");
+    }
   };
 
   const logout = () => setUser(null);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { formatCurrency } from "../lib/utils";
 import { explainJargonFast, analyzeMarketWithSearch, generateTTS } from "../lib/gemini";
 import { TrendingUp, TrendingDown, RefreshCcw, Volume2, Info, Wallet } from "lucide-react";
@@ -87,30 +88,43 @@ export function Dashboard() {
     <div className="space-y-6">
       {/* Portfolio Overview */}
       {user && (
-        <div className="bg-[#0D0F12] border border-[#1F2937] rounded-xl p-6 shadow-2xl relative overflow-hidden mb-10">
-          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-            <Wallet className="w-32 h-32 text-gold-text" />
-          </div>
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#1F2937] pb-6 mb-6">
-            <div>
-              <div className="text-[10px] text-[#6B7280] uppercase tracking-widest font-semibold flex items-center gap-2 mb-2">
-                <Wallet className="w-4 h-4 text-gold-text" /> Net Asset Value
-              </div>
-              <div className="text-4xl md:text-5xl font-serif text-white font-black tracking-tight drop-shadow-md">
-                {formatCurrency(calculateTotalValue())}
-              </div>
+        <div className="bg-[#0D0F12] border border-[#1F2937] rounded-xl shadow-2xl relative overflow-hidden mb-10 min-h-[300px]">
+          {user.banner && (
+            <div 
+              className="absolute inset-x-0 top-0 h-48 bg-cover bg-center z-0 opacity-25 object-cover" 
+              style={{ backgroundImage: `url(${user.banner})` }} 
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0D0F12] via-[#0D0F12]/80 to-transparent z-0 pointer-events-none" />
+          
+          <div className="p-6 relative z-10">
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none z-0">
+              <Wallet className="w-32 h-32 text-gold-text" />
             </div>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#1F2937] pb-6 mb-6">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  {user.tier && <span className="bg-[#181B1F] border border-gold/30 gold-text px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest">{user.tier} Rank</span>}
+                  {user.osrsUsername && <span className="text-[#9CA3AF] text-xs font-mono uppercase tracking-widest">[{user.osrsUsername}]</span>}
+                </div>
+                <div className="text-[10px] text-[#6B7280] uppercase tracking-widest font-semibold flex items-center gap-2 mb-2">
+                  <Wallet className="w-4 h-4 text-gold-text" /> Net Asset Value
+                </div>
+                <div className="text-4xl md:text-5xl font-serif text-white font-black tracking-tight drop-shadow-md">
+                  {formatCurrency(calculateTotalValue())}
+                </div>
+              </div>
             <div className="flex gap-2">
-               <button className="px-6 py-3 bg-[#181B1F] hover:bg-[#1F2937] text-xs font-mono uppercase tracking-widest text-white border border-[#1F2937] rounded transition active:scale-95 shadow">Withdraw</button>
-               <button className="px-6 py-3 bg-gold/10 hover:bg-gold/20 text-xs font-mono uppercase tracking-widest text-[#C5A059] border border-gold/30 rounded transition active:scale-95 shadow">Deposit</button>
+               <Link to="/banking" className="px-6 py-3 bg-[#181B1F] hover:bg-[#1F2937] text-xs font-mono uppercase tracking-widest text-white border border-[#1F2937] rounded transition active:scale-95 shadow">Withdraw</Link>
+               <Link to="/banking" className="px-6 py-3 bg-gold/10 hover:bg-gold/20 text-xs font-mono uppercase tracking-widest text-[#C5A059] border border-gold/30 rounded transition active:scale-95 shadow">Deposit</Link>
             </div>
           </div>
           
           <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
             {Object.entries(user.balances).map(([asset, amount]) => {
                const value = asset === "USD" || asset === "USDC" || asset === "USDT" 
-                 ? amount 
-                 : (amount as number) * (marketData[asset] || 0);
+                 ? Number(amount) 
+                 : (Number(amount)) * (marketData[asset] || 0);
                  
                return (
                  <div key={asset} className="bg-[#181B1F] p-4 rounded border border-[#1F2937]">
@@ -122,6 +136,7 @@ export function Dashboard() {
                  </div>
                )
             })}
+          </div>
           </div>
         </div>
       )}

@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, cn } from "../lib/utils";
-import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X, Lock } from "lucide-react";
+import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X, Lock, Landmark } from "lucide-react";
 import { Chatbot } from "./Chatbot";
+import { Login } from "./Login";
 
 export function Layout() {
-  const { user, login, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [globalThemes, setGlobalThemes] = useState<any[]>([]);
@@ -43,11 +44,16 @@ export function Layout() {
   const navItems = [
     { name: "Dashboard", href: "/", icon: Activity },
     { name: "Exchange", href: "/exchange", icon: LineChart },
+    { name: "Banking", href: "/banking", icon: Landmark },
     { name: "Rally Tokens", href: "/tokens", icon: Coins },
     { name: "Referral", href: "/referral", icon: Share2 },
     { name: "Settings", href: "/settings", icon: Wallet },
     { name: "Admin Portal", href: "/admin", icon: Shield, requiresAdmin: true }
   ];
+
+  if (!user) {
+    return <Login />;
+  }
 
   return (
     <div className="flex h-[100dvh] bg-[#0A0B0D] text-[#E5E7EB] overflow-hidden font-sans">
@@ -118,32 +124,21 @@ export function Layout() {
         </div>
 
         <div className="p-6 border-t border-[#1F2937] pb-safe">
-          {user ? (
-            <div className="space-y-4">
-              <div className="text-xs text-[#6B7280]">
-                Operator: <span className="text-white font-mono">{user.username}</span>
-                <div className="mt-2 flex justify-between items-center bg-[#14161A] p-3 md:p-2 rounded border border-[#1F2937]">
-                  <span className="text-[10px] uppercase tracking-widest">Bal:</span> 
-                  <span className="font-mono text-white text-xs">{formatCurrency(user.balances["USD"] || 25000)}</span>
-                </div>
+          <div className="space-y-4">
+            <div className="text-xs text-[#6B7280]">
+              Operator: <span className="text-white font-mono">{user.username}</span>
+              <div className="mt-2 flex justify-between items-center bg-[#14161A] p-3 md:p-2 rounded border border-[#1F2937]">
+                <span className="text-[10px] uppercase tracking-widest">Bal:</span> 
+                <span className="font-mono text-white text-xs">{formatCurrency(user.balances["USD"] || 0)}</span>
               </div>
-              <div className="flex items-center text-[#10B981] text-[10px] font-bold uppercase mb-2">
-                <span className="status-dot"></span>Secure Session Active
-              </div>
-              <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="flex items-center gap-2 text-[10px] tracking-widest uppercase text-[#EF4444] hover:text-white transition w-full p-3 md:p-2 border border-[#EF4444]/20 rounded justify-center bg-[#EF4444]/5 hover:bg-[#EF4444]/20 active:scale-95">
-                <LogOut className="w-3 h-3" /> Disconnect
-              </button>
             </div>
-          ) : (
-            <div className="space-y-3 md:space-y-2">
-              <button onClick={() => { login("trader_joe"); setIsMobileMenuOpen(false); }} className="w-full text-[10px] tracking-widest uppercase p-3 md:p-2 bg-[#14161A] border border-[#1F2937] hover:bg-[#181B1F] rounded transition active:scale-95">
-                Trader Auth
-              </button>
-              <button onClick={() => { login("admin"); setIsMobileMenuOpen(false); }} className="w-full text-[10px] tracking-widest uppercase p-3 md:p-2 bg-card border-gold hover:bg-[#C5A059]/10 rounded transition gold-text active:scale-95">
-                Admin Auth
-              </button>
+            <div className="flex items-center text-[#10B981] text-[10px] font-bold uppercase mb-2">
+              <span className="status-dot"></span>Secure Session Active
             </div>
-          )}
+            <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="flex items-center gap-2 text-[10px] tracking-widest uppercase text-[#EF4444] hover:text-white transition w-full p-3 md:p-2 border border-[#EF4444]/20 rounded justify-center bg-[#EF4444]/5 hover:bg-[#EF4444]/20 active:scale-95">
+              <LogOut className="w-3 h-3" /> Disconnect
+            </button>
+          </div>
         </div>
       </div>
 

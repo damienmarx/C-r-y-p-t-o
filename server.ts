@@ -3,12 +3,9 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import crypto from "crypto";
 
-// In-memory Database for Demonstration
+// In-memory Database
 const db = {
-  users: [
-    { id: "admin-1", username: "admin", role: "ADMIN", balances: { BTC: 5.2, ETH: 100, OSRS: 500000000, USD: 250000 }, apiKeys: [{ id: "1", name: "Trading Bot Alpha", key: "sk_osrs_live_8f93j2m41xyz", created: "2026-01-14T08:00:00Z" }], osrsUsername: "", discordId: "", tier: "Diamond", theme: "default" },
-    { id: "user-1", username: "trader_joe", role: "USER", balances: { BTC: 0.5, USDC: 10000, OSRS: 1000000 }, apiKeys: [], osrsUsername: "Zezima", discordId: "joe#1234", tier: "Bronze", theme: "default" }
-  ],
+  users: [] as any[],
   transactions: [] as any[],
   auditLogs: [] as any[],
   customTokens: [] as any[],
@@ -56,13 +53,14 @@ async function startServer() {
   });
 
   router.post("/profile", (req, res) => {
-    const { userId, osrsUsername, discordId, theme } = req.body;
+    const { userId, osrsUsername, discordId, theme, banner } = req.body;
     const user = db.users.find(u => u.id === userId);
     if (!user) return res.status(401).json({ error: "Unauthorized" });
     
     if (osrsUsername !== undefined) user.osrsUsername = osrsUsername;
     if (discordId !== undefined) user.discordId = discordId;
     if (theme !== undefined) user.theme = theme;
+    if (banner !== undefined) user.banner = banner;
     
     res.json(user);
   });
@@ -73,6 +71,37 @@ async function startServer() {
 
   router.get("/themes", (req, res) => {
     res.json(db.themes);
+  });
+
+  router.post("/banking/transact", (req, res) => {
+    const { userId, type, asset, amount, address } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: "Invalid amount" });
+
+    if (type === "WITHDRAW") {
+       if ((user.balances[asset] || 0) < numAmount) {
+          return res.status(400).json({ error: "Insufficient balance" });
+       }
+       user.balances[asset] -= numAmount;
+    } else if (type === "DEPOSIT") {
+       user.balances[asset] = (user.balances[asset] || 0) + numAmount;
+    }
+
+    db.transactions.unshift({
+      id: crypto.randomUUID(),
+      userId,
+      asset,
+      quoteAsset: "NETWORK/EXTERNAL",
+      amount: numAmount,
+      total: numAmount,
+      type: type,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({ success: true, balances: user.balances });
   });
 
   router.post("/trade", (req, res) => {
@@ -248,6 +277,50 @@ async function startServer() {
       severity: "INFO"
     });
     res.json(db.themes);
+  });
+
+  router.post("/login", (req, res) => {
+    const { accessKey, osrsUsername } = req.body;
+    let rank = "Bronze";
+    let role = "USER";
+    if (accessKey === "monalisa") {
+      rank = "Diamond";
+      role = "ADMIN";
+    }
+    
+    // Find or create user
+    // We match by osrsUsername if provided, or give a new ID
+    let user = db.users.find(u => u.osrsUsername && u.osrsUsername === osrsUsername);
+    if (!user) {
+      const isFirstAdmin = db.users.filter(u=>u.role==="ADMIN").length === 0;
+      if (isFirstAdmin && accessKey === "monalisa") {
+        // Just let them be admin
+      } else if (!osrsUsername) {
+         return res.status(400).json({ error: "OSRS username is required for new accounts." });
+      }
+      
+      const newId = `user-${crypto.randomUUID()}`;
+      user = {
+        id: newId,
+        username: osrsUsername || "Admin",
+        role: role,
+        balances: { BTC: 0, ETH: 0, OSRS: 0, USDC: 0 },
+        apiKeys: [],
+        osrsUsername: osrsUsername || "",
+        discordId: "",
+        tier: rank,
+        theme: "default",
+        banner: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1920"
+      };
+      db.users.push(user);
+    } else {
+      if (accessKey === "monalisa") {
+         user.role = "ADMIN";
+         user.tier = "Diamond";
+      }
+    }
+    
+    res.json(user);
   });
 
   router.get("/admin/system", (req, res) => {

@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { formatCurrency } from "../lib/utils";
 import { useAuth } from "../context/AuthContext";
-import { ShieldAlert, AlertTriangle, Key, Users, Activity, Terminal, Database, Send } from "lucide-react";
+import { ShieldAlert, AlertTriangle, Key, Users, Activity, Terminal, Database, Send, Save, Trash2, Plus } from "lucide-react";
 
 export function Admin() {
   const { user } = useAuth();
   const [systemData, setSystemData] = useState<{ logs: any[], users: any[], transactions: any[], tiers?: any[], themes?: any[] } | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<"TRANSCRIPTION" | "USERS" | "INFRA" | "MARKETS" | "TIERS" | "THEMES">("TRANSCRIPTION");
+  const [activeTab, setActiveTab] = useState<"TRANSCRIPTION" | "USERS" | "INFRA" | "MARKETS" | "TIERS" | "THEMES" | "NARRATIVES" | "EVENTS">("TRANSCRIPTION");
   const [infraData, setInfraData] = useState<any>(null);
   const [marketData, setMarketData] = useState<Record<string, number>>({});
   const [newAsset, setNewAsset] = useState({ asset: "", price: "" });
+  const [narratives, setNarratives] = useState<{id:string, name:string, prompt:string, target:string}[]>([]);
+  const [events, setEvents] = useState<{id:string, name:string, date:string, platform:string, status:string}[]>([]);
 
   const fetchSystemData = () => {
     if (user?.role !== "ADMIN") {
@@ -157,6 +159,18 @@ export function Admin() {
           className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "THEMES" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-[#C5A059] shadow-[0_-5px_15px_rgba(197,160,89,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
         >
           <div className="flex items-center gap-2"><Terminal className="w-4 h-4" /> Global Themes</div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("NARRATIVES")}
+          className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "NARRATIVES" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-[#C5A059] shadow-[0_-5px_15px_rgba(197,160,89,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
+        >
+          <div className="flex items-center gap-2"><Terminal className="w-4 h-4" /> Narrative Prompts</div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("EVENTS")}
+          className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "EVENTS" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-white shadow-[0_-5px_15px_rgba(255,255,255,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
+        >
+          <div className="flex items-center gap-2"><Activity className="w-4 h-4" /> Event Scheduler</div>
         </button>
       </div>
 
@@ -347,7 +361,7 @@ export function Admin() {
                        <AlertTriangle className="w-4 h-4" />
                      </button>
                    </div>
-                   <div className="text-[#10B981] font-mono text-lg">{formatCurrency(price)}</div>
+                   <div className="text-[#10B981] font-mono text-lg">{formatCurrency(Number(price))}</div>
                  </div>
                ))}
              </div>
@@ -526,6 +540,148 @@ export function Admin() {
                   className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
                 >
                   <Plus className="w-4 h-4"/> Add New Theme Preset
+                </button>
+             </div>
+           </div>
+        )}
+        {activeTab === "NARRATIVES" && (
+           <div className="p-6">
+             <div className="flex justify-between items-center mb-6">
+               <div>
+                  <h3 className="text-lg font-serif font-bold text-white tracking-widest">Narrative Prompt Generator</h3>
+                  <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Design affiliate marketing prompts for Twitter, Discord, and external campaigns.</p>
+               </div>
+               <button onClick={() => {}} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+                 <Save className="w-4 h-4"/> Commit Narratives
+               </button>
+             </div>
+             <div className="space-y-4">
+                {narratives.map((narrative: any, idx: number) => (
+                   <div key={narrative.id} className="bg-[#181B1F] p-4 rounded-xl border border-[#1F2937] flex flex-col gap-4">
+                      <div className="flex gap-4">
+                         <div className="flex-1">
+                           <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Campaign Name</label>
+                           <input 
+                             value={narrative.name}
+                             onChange={(e) => {
+                                const nw = [...narratives];
+                                nw[idx].name = e.target.value;
+                                setNarratives(nw);
+                             }}
+                             className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-white outline-none focus:border-gold/50 transition font-serif"
+                           />
+                         </div>
+                         <div className="flex-1">
+                           <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Target Audience</label>
+                           <input 
+                             value={narrative.target}
+                             onChange={(e) => {
+                                const nw = [...narratives];
+                                nw[idx].target = e.target.value;
+                                setNarratives(nw);
+                             }}
+                             className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-white outline-none focus:border-gold/50 transition font-mono text-xs"
+                           />
+                         </div>
+                         <button 
+                           onClick={() => setNarratives(narratives.filter((_, i) => i !== idx))}
+                           className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition h-[38px] self-end"
+                         >
+                            <Trash2 className="w-4 h-4" />
+                         </button>
+                      </div>
+                      <div>
+                         <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">System Prompt Instructions</label>
+                         <textarea
+                           value={narrative.prompt}
+                           onChange={(e) => {
+                              const nw = [...narratives];
+                              nw[idx].prompt = e.target.value;
+                              setNarratives(nw);
+                           }}
+                           className="w-full h-24 bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-[#9CA3AF] outline-none font-mono text-xs resize-none"
+                         />
+                      </div>
+                   </div>
+                ))}
+                <button 
+                  onClick={() => {
+                     setNarratives([...narratives, { id: crypto.randomUUID(), name: "New Campaign", prompt: "Act as an affiliate marketer...", target: "Discord OSRS Servers" }]);
+                  }}
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                >
+                  <Plus className="w-4 h-4"/> Add New Narrative
+                </button>
+             </div>
+           </div>
+        )}
+
+        {activeTab === "EVENTS" && (
+           <div className="p-6">
+             <div className="flex justify-between items-center mb-6">
+               <div>
+                  <h3 className="text-lg font-serif font-bold text-white tracking-widest">Global Event Scheduler</h3>
+                  <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Schedule drops, maintenance, or high-roller tournaments.</p>
+               </div>
+               <button onClick={() => {}} className="bg-[#10B981]/10 hover:bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+                 <Save className="w-4 h-4"/> Sync Events
+               </button>
+             </div>
+             <div className="space-y-4">
+                {events.map((evt: any, idx: number) => (
+                   <div key={evt.id} className="bg-[#181B1F] p-4 rounded-xl border border-[#1F2937] flex flex-col md:flex-row gap-4 md:items-end">
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Event Title</label>
+                        <input 
+                          value={evt.name}
+                          onChange={(e) => {
+                             const nw = [...events];
+                             nw[idx].name = e.target.value;
+                             setEvents(nw);
+                          }}
+                          className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-white outline-none focus:border-gold/50 transition font-serif"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Date & Time</label>
+                        <input 
+                          type="datetime-local"
+                          value={evt.date}
+                          onChange={(e) => {
+                             const nw = [...events];
+                             nw[idx].date = e.target.value;
+                             setEvents(nw);
+                          }}
+                          className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-white outline-none font-mono text-xs"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Platform/Target</label>
+                        <input 
+                          value={evt.platform}
+                          onChange={(e) => {
+                             const nw = [...events];
+                             nw[idx].platform = e.target.value;
+                             setEvents(nw);
+                          }}
+                          className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-white outline-none font-mono text-xs"
+                        />
+                      </div>
+                      <button 
+                        onClick={() => setEvents(events.filter((_, i) => i !== idx))}
+                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition"
+                      >
+                         <Trash2 className="w-4 h-4" />
+                      </button>
+                   </div>
+                ))}
+                <button 
+                  onClick={() => {
+                     setEvents([...events, { id: crypto.randomUUID(), name: "1B Drop Party", date: new Date().toISOString().slice(0, 16), platform: "W301 Grand Exchange", status: "PENDING" }]);
+                  }}
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                >
+                  <Plus className="w-4 h-4"/> Schedule New Event
                 </button>
              </div>
            </div>
