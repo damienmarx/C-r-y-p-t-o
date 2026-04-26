@@ -194,7 +194,9 @@ async function startServer() {
 
   router.get("/transactions", (req, res) => {
     const { userId } = req.query;
-    if (!userId) return res.status(400).json({ error: "Missing userId" });
+    if (!userId) {
+      return res.json(db.transactions.slice(-100));
+    }
     const userTxs = db.transactions.filter(t => t.userId === String(userId));
     res.json(userTxs.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10)); // send latest 10 returning array
   });
@@ -459,10 +461,6 @@ async function startServer() {
     res.json(trade);
   });
 
-  router.get("/transactions", (req, res) => {
-    // For the block explorer
-    res.json(db.transactions.slice(-100)); // Last 100 TXNs
-  });
 
   router.get("/bots", (req, res) => {
     const { userId } = req.query;

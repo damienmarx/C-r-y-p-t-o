@@ -8,7 +8,7 @@ export function Explorer() {
   const fetchTransactions = () => {
     fetch("/api/transactions")
       .then(r => r.json())
-      .then(d => setTransactions(d.reverse()))
+      .then(d => setTransactions(Array.isArray(d) ? d.reverse() : []))
       .catch();
   };
 
