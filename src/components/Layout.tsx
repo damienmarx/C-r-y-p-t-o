@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, cn } from "../lib/utils";
-import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X, Lock, Landmark } from "lucide-react";
+import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X, Lock, Landmark, MessageSquare, ArrowRightLeft, Search } from "lucide-react";
 import { Chatbot } from "./Chatbot";
 import { Login } from "./Login";
 
@@ -43,6 +43,9 @@ export function Layout() {
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: Activity },
+    { name: "Global Chat", href: "/chat", icon: MessageSquare },
+    { name: "P2P Trading", href: "/p2p", icon: ArrowRightLeft },
+    { name: "Block Explorer", href: "/explorer", icon: Search },
     { name: "Exchange", href: "/exchange", icon: LineChart },
     { name: "Banking", href: "/banking", icon: Landmark },
     { name: "Rally Tokens", href: "/tokens", icon: Coins },
@@ -100,7 +103,7 @@ export function Layout() {
             <nav className="space-y-2">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.href;
-                const isLocked = item.requiresAdmin && user?.role !== "ADMIN";
+                const isLocked = item.requiresAdmin && !["ADMIN", "AUDITOR"].includes(user?.role || "");
                 return (
                   <Link
                     key={item.name}
@@ -125,8 +128,17 @@ export function Layout() {
 
         <div className="p-6 border-t border-[#1F2937] pb-safe">
           <div className="space-y-4">
+            <div className="text-xs text-[#6B7280] flex items-center justify-between">
+              <div>
+                Operator: <span className="text-white font-mono">{user.username}</span>
+              </div>
+              {user.avatar && (
+                <div className="w-8 h-8 rounded border border-gold/50 overflow-hidden ml-2">
+                  <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
             <div className="text-xs text-[#6B7280]">
-              Operator: <span className="text-white font-mono">{user.username}</span>
               <div className="mt-2 flex justify-between items-center bg-[#14161A] p-3 md:p-2 rounded border border-[#1F2937]">
                 <span className="text-[10px] uppercase tracking-widest">Bal:</span> 
                 <span className="font-mono text-white text-xs">{formatCurrency(user.balances["USD"] || 0)}</span>

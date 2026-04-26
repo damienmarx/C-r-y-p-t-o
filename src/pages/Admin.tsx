@@ -14,15 +14,21 @@ export function Admin() {
   const [narratives, setNarratives] = useState<{id:string, name:string, prompt:string, target:string}[]>([]);
   const [events, setEvents] = useState<{id:string, name:string, date:string, platform:string, status:string}[]>([]);
 
+  const isReadOnly = user?.role === "AUDITOR";
+
   const fetchSystemData = () => {
-    if (user?.role !== "ADMIN") {
+    if (!user || !["ADMIN", "AUDITOR"].includes(user.role)) {
       setUnauthorized(true);
       return;
     }
     setUnauthorized(false);
     fetch(`/api/admin/system?userId=${user.id}`)
       .then(r => r.json())
-      .then(d => setSystemData({ logs: d.auditLogs || [], users: d.users || [], transactions: d.transactions || [], tiers: d.tiers || [], themes: d.themes || [] }))
+      .then(d => {
+        setSystemData({ logs: d.auditLogs || [], users: d.users || [], transactions: d.transactions || [], tiers: d.tiers || [], themes: d.themes || [] });
+        if (d.narratives) setNarratives(d.narratives);
+        if (d.events) setEvents(d.events);
+      })
       .catch(e => console.error(e));
 
     fetch(`/api/admin/infrastructure?userId=${user.id}`)
@@ -84,11 +90,31 @@ export function Admin() {
   };
 
   const handleSaveThemes = async () => {
-    if (!user || !systemData?.themes) return;
+    if (!user || !systemData?.themes || isReadOnly) return;
     const res = await fetch("/api/admin/themes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id, themes: systemData.themes })
+    });
+    if (res.ok) fetchSystemData();
+  };
+
+  const handleSaveNarratives = async () => {
+    if (!user || isReadOnly) return;
+    const res = await fetch("/api/admin/narratives", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, narratives })
+    });
+    if (res.ok) fetchSystemData();
+  };
+
+  const handleSaveEvents = async () => {
+    if (!user || isReadOnly) return;
+    const res = await fetch("/api/admin/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, events })
     });
     if (res.ok) fetchSystemData();
   };
@@ -222,11 +248,14 @@ export function Admin() {
                          <div className="text-[10px] text-[#6B7280] font-mono mt-1">UUID: {u.id}</div>
                        </div>
                        <select 
+                         disabled={isReadOnly}
                          value={u.role}
                          onChange={(e) => updateUserRole(u.id, e.target.value)}
                          className={`px-3 py-1 rounded text-[10px] font-bold tracking-widest uppercase outline-none cursor-pointer border ${u.role === "ADMIN" ? "bg-gold/10 text-[#C5A059] border-[#C5A059]/30" : "bg-[#181B1F] text-white border-[#1F2937]"}`}
                        >
                          <option value="USER">Base User</option>
+                         <option value="TRADER">Trader</option>
+                         <option value="AUDITOR">Auditor</option>
                          <option value="ADMIN">Overseer (Admin)</option>
                        </select>
                      </div>
@@ -340,8 +369,9 @@ export function Admin() {
                    />
                  </div>
                  <button 
+                   disabled={isReadOnly}
                    onClick={() => handleUpdateMarketAsset(newAsset.asset.toUpperCase(), newAsset.price)}
-                   className="w-full md:w-auto flex items-center justify-center gap-2 border border-[#10B981] text-[#10B981] hover:bg-[#10B981]/10 font-bold tracking-widest px-6 py-3 rounded transition uppercase text-[10px]"
+                   className="w-full md:w-auto flex items-center justify-center gap-2 border border-[#10B981] text-[#10B981] hover:bg-[#10B981]/10 font-bold tracking-widest px-6 py-3 rounded transition uppercase text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                  >
                    <Send className="w-4 h-4" /> Deploy Peg
                  </button>
@@ -354,8 +384,9 @@ export function Admin() {
                    <div className="flex justify-between items-center mb-4">
                      <span className="text-xl font-bold text-white font-mono">{asset}</span>
                      <button 
+                       disabled={isReadOnly}
                        onClick={() => handleDeleteMarketAsset(asset)}
-                       className="text-[#EF4444] hover:text-[#EF4444]/70 p-1"
+                       className="text-[#EF4444] hover:text-[#EF4444]/70 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                        title="Delist Asset"
                      >
                        <AlertTriangle className="w-4 h-4" />
@@ -375,7 +406,7 @@ export function Admin() {
                   <h3 className="text-lg font-serif font-bold text-white tracking-widest">Custom Rank Generation</h3>
                   <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Define hierarchy of node progression based on volume or manual invite.</p>
                </div>
-               <button onClick={handleSaveTiers} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+               <button onClick={handleSaveTiers} disabled={isReadOnly} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                  <Save className="w-4 h-4"/> Commit Tiers
                </button>
              </div>
@@ -420,24 +451,26 @@ export function Admin() {
                         />
                       </div>
                       <button 
+                        disabled={isReadOnly}
                         onClick={() => {
                            const newTiers = systemData.tiers?.filter((_, i) => i !== idx);
                            setSystemData({...systemData, tiers: newTiers});
                         }}
-                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition"
+                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                          <Trash2 className="w-4 h-4" />
                       </button>
                    </div>
                 ))}
                 <button 
+                  disabled={isReadOnly}
                   onClick={() => {
                      setSystemData({
                        ...systemData!, 
                        tiers: [...(systemData?.tiers || []), { id: crypto.randomUUID(), name: "New Rank", color: "#FFFFFF", requirements: "Manual Invite" }]
                      });
                   }}
-                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4"/> Add New Custom Rank
                 </button>
@@ -452,7 +485,7 @@ export function Admin() {
                   <h3 className="text-lg font-serif font-bold text-white tracking-widest">Global Terminal Themes</h3>
                   <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Inject custom aesthetic presets accessible to operators.</p>
                </div>
-               <button onClick={handleSaveThemes} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+               <button onClick={handleSaveThemes} disabled={isReadOnly} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                  <Save className="w-4 h-4"/> Commit Themes
                </button>
              </div>
@@ -520,24 +553,26 @@ export function Admin() {
                         </div>
                       </div>
                       <button 
+                        disabled={isReadOnly}
                         onClick={() => {
                            const newThemes = systemData.themes?.filter((_, i) => i !== idx);
                            setSystemData({...systemData, themes: newThemes});
                         }}
-                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition"
+                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                          <Trash2 className="w-4 h-4" />
                       </button>
                    </div>
                 ))}
                 <button 
+                  disabled={isReadOnly}
                   onClick={() => {
                      setSystemData({
                        ...systemData!, 
                        themes: [...(systemData?.themes || []), { id: crypto.randomUUID(), name: "Custom Variant", primary: "#FFFFFF", bg: "#000000" }]
                      });
                   }}
-                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4"/> Add New Theme Preset
                 </button>
@@ -551,7 +586,7 @@ export function Admin() {
                   <h3 className="text-lg font-serif font-bold text-white tracking-widest">Narrative Prompt Generator</h3>
                   <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Design affiliate marketing prompts for Twitter, Discord, and external campaigns.</p>
                </div>
-               <button onClick={() => {}} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+               <button onClick={handleSaveNarratives} disabled={isReadOnly} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                  <Save className="w-4 h-4"/> Commit Narratives
                </button>
              </div>
@@ -584,8 +619,9 @@ export function Admin() {
                            />
                          </div>
                          <button 
+                           disabled={isReadOnly}
                            onClick={() => setNarratives(narratives.filter((_, i) => i !== idx))}
-                           className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition h-[38px] self-end"
+                           className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition h-[38px] self-end disabled:opacity-50 disabled:cursor-not-allowed"
                          >
                             <Trash2 className="w-4 h-4" />
                          </button>
@@ -605,10 +641,11 @@ export function Admin() {
                    </div>
                 ))}
                 <button 
+                  disabled={isReadOnly}
                   onClick={() => {
                      setNarratives([...narratives, { id: crypto.randomUUID(), name: "New Campaign", prompt: "Act as an affiliate marketer...", target: "Discord OSRS Servers" }]);
                   }}
-                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4"/> Add New Narrative
                 </button>
@@ -623,7 +660,7 @@ export function Admin() {
                   <h3 className="text-lg font-serif font-bold text-white tracking-widest">Global Event Scheduler</h3>
                   <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Schedule drops, maintenance, or high-roller tournaments.</p>
                </div>
-               <button onClick={() => {}} className="bg-[#10B981]/10 hover:bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+               <button onClick={handleSaveEvents} disabled={isReadOnly} className="bg-[#10B981]/10 hover:bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                  <Save className="w-4 h-4"/> Sync Events
                </button>
              </div>
@@ -668,18 +705,20 @@ export function Admin() {
                         />
                       </div>
                       <button 
+                        disabled={isReadOnly}
                         onClick={() => setEvents(events.filter((_, i) => i !== idx))}
-                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition"
+                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                          <Trash2 className="w-4 h-4" />
                       </button>
                    </div>
                 ))}
                 <button 
+                  disabled={isReadOnly}
                   onClick={() => {
                      setEvents([...events, { id: crypto.randomUUID(), name: "1B Drop Party", date: new Date().toISOString().slice(0, 16), platform: "W301 Grand Exchange", status: "PENDING" }]);
                   }}
-                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4"/> Schedule New Event
                 </button>

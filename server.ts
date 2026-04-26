@@ -9,6 +9,10 @@ const db = {
   transactions: [] as any[],
   auditLogs: [] as any[],
   customTokens: [] as any[],
+  narratives: [] as any[],
+  events: [] as any[],
+  chats: [] as any[],
+  trades: [] as any[],
   marketPrices: {
     BTC: 65000.0,
     ETH: 3500.0,
@@ -53,7 +57,7 @@ async function startServer() {
   });
 
   router.post("/profile", (req, res) => {
-    const { userId, osrsUsername, discordId, theme, banner } = req.body;
+    const { userId, osrsUsername, discordId, theme, banner, avatar } = req.body;
     const user = db.users.find(u => u.id === userId);
     if (!user) return res.status(401).json({ error: "Unauthorized" });
     
@@ -61,6 +65,7 @@ async function startServer() {
     if (discordId !== undefined) user.discordId = discordId;
     if (theme !== undefined) user.theme = theme;
     if (banner !== undefined) user.banner = banner;
+    if (avatar !== undefined) user.avatar = avatar;
     
     res.json(user);
   });
@@ -195,7 +200,7 @@ async function startServer() {
   router.get("/admin/infrastructure", (req, res) => {
     const { userId } = req.query;
     const user = db.users.find(u => u.id === userId);
-    if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
+    if (!user || (user.role !== "ADMIN" && user.role !== "AUDITOR")) return res.status(403).json({ error: "Forbidden: Admin or Auditor only" });
     
     // Send mocked VPS and env configs
     res.json({
@@ -282,10 +287,13 @@ async function startServer() {
   router.post("/login", (req, res) => {
     const { accessKey, osrsUsername } = req.body;
     let rank = "Bronze";
-    let role = "USER";
+    let role = "TRADER";
     if (accessKey === "monalisa") {
       rank = "Diamond";
       role = "ADMIN";
+    } else if (accessKey === "auditor") {
+      rank = "Silver";
+      role = "AUDITOR";
     }
     
     // Find or create user
@@ -317,17 +325,130 @@ async function startServer() {
       if (accessKey === "monalisa") {
          user.role = "ADMIN";
          user.tier = "Diamond";
+      } else if (accessKey === "auditor" && user.role !== "ADMIN") {
+         user.role = "AUDITOR";
+         user.tier = "Silver";
       }
     }
     
     res.json(user);
   });
 
+  router.get("/chats", (req, res) => {
+    res.json(db.chats.slice(-100)); // Last 100 messages
+  });
+
+  router.post("/chats", (req, res) => {
+    const { userId, message } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    
+    const newChat = {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      username: user.username,
+      tier: user.tier,
+      avatar: user.avatar,
+      message,
+      timestamp: new Date().toISOString()
+    };
+    db.chats.push(newChat);
+    res.json(newChat);
+  });
+
+  router.get("/trades", (req, res) => {
+    res.json(db.trades.filter(t => t.status === "OPEN"));
+  });
+
+  router.post("/trades", (req, res) => {
+    const { userId, type, assetOffer, amountOffer, assetRequest, amountRequest } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    
+    // In a real app we'd verify and lock balances here
+    const newTrade = {
+      id: crypto.randomUUID(),
+      creatorId: user.id,
+      creatorName: user.username,
+      type, // 'BUY' or 'SELL'
+      assetOffer,
+      amountOffer: Number(amountOffer),
+      assetRequest,
+      amountRequest: Number(amountRequest),
+      status: "OPEN",
+      timestamp: new Date().toISOString()
+    };
+    db.trades.push(newTrade);
+    res.json(newTrade);
+  });
+
+  router.post("/trades/:id/accept", (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.body;
+    const trade = db.trades.find(t => t.id === id);
+    const user = db.users.find(u => u.id === userId);
+    if (!trade || !user) return res.status(404).json({ error: "Not found" });
+    
+    if (trade.creatorId === userId) return res.status(400).json({ error: "Cannot accept own trade" });
+    if (trade.status !== "OPEN") return res.status(400).json({ error: "Trade not open" });
+    
+    // Process trade execution
+    trade.status = "COMPLETED";
+    trade.takerId = user.id;
+    trade.takerName = user.username;
+    trade.completedAt = new Date().toISOString();
+    
+    // Generate transaction records for both parties
+    db.transactions.push({
+      id: crypto.randomUUID(),
+      userId: trade.creatorId,
+      type: "TRADE_EXECUTION",
+      amount: trade.amountRequest,
+      currency: trade.assetRequest,
+      status: "COMPLETED",
+      timestamp: new Date().toISOString(),
+      note: `Trade ${trade.id} fulfilled by ${user.username}`
+    });
+    db.transactions.push({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      type: "TRADE_EXECUTION",
+      amount: trade.amountOffer,
+      currency: trade.assetOffer,
+      status: "COMPLETED",
+      timestamp: new Date().toISOString(),
+      note: `Accepted trade ${trade.id} from ${trade.creatorName}`
+    });
+
+    res.json(trade);
+  });
+
+  router.get("/transactions", (req, res) => {
+    // For the block explorer
+    res.json(db.transactions.slice(-100)); // Last 100 TXNs
+  });
+
   router.get("/admin/system", (req, res) => {
     const { userId } = req.query;
     const user = db.users.find(u => u.id === userId);
+    if (!user || (user.role !== "ADMIN" && user.role !== "AUDITOR")) return res.status(403).json({ error: "Forbidden: Admin or Auditor only" });
+    res.json({ users: db.users, transactions: db.transactions, auditLogs: db.auditLogs, tiers: db.tiers, themes: db.themes, narratives: db.narratives, events: db.events });
+  });
+
+  router.post("/admin/narratives", (req, res) => {
+    const { userId, narratives } = req.body;
+    const user = db.users.find(u => u.id === userId);
     if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
-    res.json({ users: db.users, transactions: db.transactions, auditLogs: db.auditLogs, tiers: db.tiers, themes: db.themes });
+    db.narratives = narratives;
+    res.json(db.narratives);
+  });
+
+  router.post("/admin/events", (req, res) => {
+    const { userId, events } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
+    db.events = events;
+    res.json(db.events);
   });
 
   router.post("/admin/system", (req, res) => {

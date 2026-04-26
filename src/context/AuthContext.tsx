@@ -10,6 +10,7 @@ interface User {
   theme?: string;
   tier?: string;
   banner?: string;
+  avatar?: string;
 }
 
 interface AuthContextType {

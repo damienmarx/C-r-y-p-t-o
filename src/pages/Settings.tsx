@@ -16,6 +16,7 @@ export function Settings() {
     discordId: user?.discordId || '',
     theme: user?.theme || 'default',
     banner: user?.banner || '',
+    avatar: user?.avatar || '',
   });
 
   useEffect(() => {
@@ -62,7 +63,8 @@ export function Settings() {
            osrsUsername: accountState.osrsUsername,
            discordId: accountState.discordId,
            theme: accountState.theme,
-           banner: accountState.banner
+           banner: accountState.banner,
+           avatar: accountState.avatar
          })
       });
       if (res.ok) {
@@ -200,14 +202,25 @@ export function Settings() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Banner Image URL</label>
-              <input 
-                value={accountState.banner} 
-                onChange={e => setAccountState({...accountState, banner: e.target.value})}
-                className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono"
-                placeholder="https://..."
-              />
+            <div className="flex gap-4 mb-4">
+              <div className="flex-1">
+                <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Banner Image URL</label>
+                <input 
+                  value={accountState.banner} 
+                  onChange={e => setAccountState({...accountState, banner: e.target.value})}
+                  className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono"
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Avatar Image URL</label>
+                <input 
+                  value={accountState.avatar} 
+                  onChange={e => setAccountState({...accountState, avatar: e.target.value})}
+                  className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono"
+                  placeholder="https://..."
+                />
+              </div>
             </div>
             <button type="submit" className="flex items-center gap-2 border border-gold text-[#C5A059] bg-[#C5A059]/5 hover:bg-[#C5A059]/10 font-serif tracking-widest px-6 py-3 rounded transition uppercase text-[10px]">
               <Save className="w-4 h-4" /> Commit Identity Changes
