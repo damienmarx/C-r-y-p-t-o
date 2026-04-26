@@ -13,6 +13,7 @@ const db = {
   events: [] as any[],
   chats: [] as any[],
   trades: [] as any[],
+  bots: [] as any[],
   marketPrices: {
     BTC: 65000.0,
     ETH: 3500.0,
@@ -46,6 +47,41 @@ setInterval(() => {
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // Trading Bot Engine Interval
+  setInterval(() => {
+    db.bots.forEach(bot => {
+      if (bot.status === "ACTIVE") {
+         // 30% chance to execute a trade every 5 seconds
+         if (Math.random() < 0.3) {
+           const isProfitable = Math.random() > 0.4; // 60% chance of profit
+           // Between $5 to $100 change based on budget magnitude simulation
+           const magnitude = (bot.budget * 0.05) * Math.random(); 
+           const result = isProfitable ? magnitude : -magnitude;
+           
+           bot.totalProfit += result;
+           bot.tradesExecuted++;
+           
+           if (bot.userId) {
+              const user = db.users.find(u => u.id === bot.userId);
+              if (user) {
+                 user.balances.USD = (user.balances.USD || 0) + result;
+                 db.transactions.push({
+                   id: `bot-${crypto.randomUUID()}`,
+                   userId: user.id,
+                   type: 'BOT_TRADE',
+                   amount: result,
+                   currency: 'USD',
+                   status: 'COMPLETED',
+                   timestamp: new Date().toISOString(),
+                   note: `Automated ${bot.strategy} execution on ${bot.asset}`
+                 });
+              }
+           }
+         }
+      }
+    });
+  }, 5000);
 
   app.use(express.json());
 
@@ -426,6 +462,53 @@ async function startServer() {
   router.get("/transactions", (req, res) => {
     // For the block explorer
     res.json(db.transactions.slice(-100)); // Last 100 TXNs
+  });
+
+  router.get("/bots", (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: "Missing userId" });
+    const userBots = db.bots.filter(b => b.userId === String(userId));
+    res.json(userBots);
+  });
+
+  router.post("/bots", (req, res) => {
+    const { userId, name, asset, strategy, budget } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    
+    const newBot = {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      name,
+      asset,
+      strategy,
+      budget: Number(budget),
+      status: "ACTIVE",
+      createdAt: new Date().toISOString(),
+      tradesExecuted: 0,
+      totalProfit: 0
+    };
+    db.bots.push(newBot);
+    res.json(newBot);
+  });
+
+  router.post("/bots/:id/toggle", (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.body;
+    const bot = db.bots.find(b => b.id === id && b.userId === userId);
+    if (!bot) return res.status(404).json({ error: "Not found" });
+    
+    bot.status = bot.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
+    res.json(bot);
+  });
+
+  router.delete("/bots/:id", (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.body;
+    const initialLen = db.bots.length;
+    db.bots = db.bots.filter(b => !(b.id === id && b.userId === userId));
+    if (db.bots.length === initialLen) return res.status(404).json({ error: "Not found" });
+    res.json({ success: true });
   });
 
   router.get("/admin/system", (req, res) => {

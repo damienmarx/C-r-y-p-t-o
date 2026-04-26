@@ -3,22 +3,25 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // 1. Text / Assistant Chat
-export async function sendChatMessage(history: any[], message: string) {
-  const chat = ai.chats.create({
+export async function sendChatMessage(history: {role: "user" | "model", content: string}[], message: string) {
+  const contents = history.map(msg => ({
+    role: msg.role,
+    parts: [{ text: msg.content }]
+  }));
+  
+  contents.push({
+    role: "user",
+    parts: [{ text: message }]
+  });
+
+  const response = await ai.models.generateContent({
     model: "gemini-3.1-pro-preview",
+    contents,
     config: {
-      systemInstruction: "You are an elite Crypto and OSRS Gold Investment Advisor. Use sophisticated high-finance jargon (e.g., liquidity pools, arbitrage, alpha generation, order book, slippage) combined with Runescape terminology (e.g., Grand Exchange, High Alch value, staking). Be professional, precise, and transparent about theoretical risks. Never give legitimate financial advice, always add a disclaimer.",
+      systemInstruction: "You are an elite Crypto and OSRS Gold Investment Advisor. Use sophisticated high-finance jargon (e.g., liquidity pools, arbitrage, alpha generation, order book, slippage) combined with Runescape terminology (e.g., Grand Exchange, High Alch value, staking). Be professional, precise, and transparent about theoretical risks. Never give legitimate financial advice, always add a disclaimer."
     }
   });
 
-  // Replay history
-  for (const msg of history) {
-    if (msg.role === "user") await chat.sendMessage({ message: msg.content });
-    // Note: The SDK manages history automatically if we use the same chat instance natively, 
-    // but here we just pass the history as part of the context for simplicity or instantiate with history if supported.
-  }
-  
-  const response = await chat.sendMessage({ message });
   return response.text;
 }
 

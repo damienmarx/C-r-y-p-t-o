@@ -11,6 +11,7 @@ import { Banking } from "./pages/Banking";
 import { GlobalChat } from "./pages/GlobalChat";
 import { P2PTrading } from "./pages/P2PTrading";
 import { Explorer } from "./pages/Explorer";
+import { Bots } from "./pages/Bots";
 import { AuthProvider } from "./context/AuthContext";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="chat" element={<GlobalChat />} />
             <Route path="p2p" element={<P2PTrading />} />
             <Route path="explorer" element={<Explorer />} />
+            <Route path="bots" element={<Bots />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -204,22 +204,38 @@ export function Settings() {
             </div>
             <div className="flex gap-4 mb-4">
               <div className="flex-1">
-                <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Banner Image URL</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Banner Image</label>
                 <input 
-                  value={accountState.banner} 
-                  onChange={e => setAccountState({...accountState, banner: e.target.value})}
-                  className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono"
-                  placeholder="https://..."
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setAccountState({...accountState, banner: reader.result as string});
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono text-xs file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-mono file:bg-gold/10 file:text-[#C5A059] hover:file:bg-gold/20"
                 />
+                {accountState.banner && <img src={accountState.banner} alt="Banner Preview" className="mt-2 w-full h-24 object-cover rounded border border-[#1F2937]" />}
               </div>
               <div className="flex-1">
-                <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Avatar Image URL</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Profile Avatar Image</label>
                 <input 
-                  value={accountState.avatar} 
-                  onChange={e => setAccountState({...accountState, avatar: e.target.value})}
-                  className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono"
-                  placeholder="https://..."
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setAccountState({...accountState, avatar: reader.result as string});
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono text-xs file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-mono file:bg-gold/10 file:text-[#C5A059] hover:file:bg-gold/20"
                 />
+                {accountState.avatar && <img src={accountState.avatar} alt="Avatar Preview" className="mt-2 w-16 h-16 object-cover rounded border border-[#1F2937]" />}
               </div>
             </div>
             <button type="submit" className="flex items-center gap-2 border border-gold text-[#C5A059] bg-[#C5A059]/5 hover:bg-[#C5A059]/10 font-serif tracking-widest px-6 py-3 rounded transition uppercase text-[10px]">

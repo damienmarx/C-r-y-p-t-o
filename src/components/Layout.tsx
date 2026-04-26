@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, cn } from "../lib/utils";
-import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X, Lock, Landmark, MessageSquare, ArrowRightLeft, Search } from "lucide-react";
+import { Bot, LineChart, Wallet, Shield, Coins, Share2, LogOut, Activity, Menu, X, Lock, Landmark, MessageSquare, ArrowRightLeft, Search, Cpu } from "lucide-react";
 import { Chatbot } from "./Chatbot";
 import { Login } from "./Login";
 
@@ -45,6 +45,7 @@ export function Layout() {
     { name: "Dashboard", href: "/", icon: Activity },
     { name: "Global Chat", href: "/chat", icon: MessageSquare },
     { name: "P2P Trading", href: "/p2p", icon: ArrowRightLeft },
+    { name: "Trading Bots", href: "/bots", icon: Cpu },
     { name: "Block Explorer", href: "/explorer", icon: Search },
     { name: "Exchange", href: "/exchange", icon: LineChart },
     { name: "Banking", href: "/banking", icon: Landmark },
