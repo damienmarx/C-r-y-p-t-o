@@ -6,8 +6,8 @@ import crypto from "crypto";
 // In-memory Database for Demonstration
 const db = {
   users: [
-    { id: "admin-1", username: "admin", role: "ADMIN", balances: { BTC: 5.2, ETH: 100, OSRS: 500000000, USD: 250000 }, apiKeys: [{ id: "1", name: "Trading Bot Alpha", key: "sk_osrs_live_8f93j2m41xyz", created: "2026-01-14T08:00:00Z" }] },
-    { id: "user-1", username: "trader_joe", role: "USER", balances: { BTC: 0.5, USDC: 10000, OSRS: 1000000 }, apiKeys: [] }
+    { id: "admin-1", username: "admin", role: "ADMIN", balances: { BTC: 5.2, ETH: 100, OSRS: 500000000, USD: 250000 }, apiKeys: [{ id: "1", name: "Trading Bot Alpha", key: "sk_osrs_live_8f93j2m41xyz", created: "2026-01-14T08:00:00Z" }], osrsUsername: "", discordId: "", tier: "Diamond", theme: "default" },
+    { id: "user-1", username: "trader_joe", role: "USER", balances: { BTC: 0.5, USDC: 10000, OSRS: 1000000 }, apiKeys: [], osrsUsername: "Zezima", discordId: "joe#1234", tier: "Bronze", theme: "default" }
   ],
   transactions: [] as any[],
   auditLogs: [] as any[],
@@ -19,7 +19,18 @@ const db = {
     USDC: 1.0,
     USDT: 1.0,
     OSRS: 0.00025, // 1M OSRS Gold = ~$0.25
-  }
+  },
+  tiers: [
+    { id: "1", name: "Bronze", color: "#CD7F32", requirements: "0 USD Volume" },
+    { id: "2", name: "Silver", color: "#C0C0C0", requirements: "10,000 USD Volume" },
+    { id: "3", name: "Gold", color: "#FFD700", requirements: "50,000 USD Volume" },
+    { id: "4", name: "Diamond", color: "#00FFFF", requirements: "Invite Only" }
+  ],
+  themes: [
+    { id: "default", name: "Luxury Gold", primary: "#C5A059", bg: "#0A0B0D" },
+    { id: "cyber", name: "Cyberpunk V2", primary: "#00FF41", bg: "#050A0F" },
+    { id: "blood", name: "Crimson Matrix", primary: "#FF3366", bg: "#0F0505" }
+  ]
 };
 
 // Market simulation loop
@@ -42,6 +53,26 @@ async function startServer() {
 
   router.get("/market", (req, res) => {
     res.json(db.marketPrices);
+  });
+
+  router.post("/profile", (req, res) => {
+    const { userId, osrsUsername, discordId, theme } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    
+    if (osrsUsername !== undefined) user.osrsUsername = osrsUsername;
+    if (discordId !== undefined) user.discordId = discordId;
+    if (theme !== undefined) user.theme = theme;
+    
+    res.json(user);
+  });
+
+  router.get("/tiers", (req, res) => {
+    res.json(db.tiers);
+  });
+
+  router.get("/themes", (req, res) => {
+    res.json(db.themes);
   });
 
   router.post("/trade", (req, res) => {
@@ -185,11 +216,45 @@ async function startServer() {
     res.json(db.marketPrices);
   });
 
+  router.post("/admin/tiers", (req, res) => {
+    const { userId, tiers } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
+
+    db.tiers = tiers;
+    
+    db.auditLogs.unshift({
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      action: "TIERS_UPDATED",
+      details: `Admin updated progression tiers.`,
+      severity: "INFO"
+    });
+    res.json(db.tiers);
+  });
+
+  router.post("/admin/themes", (req, res) => {
+    const { userId, themes } = req.body;
+    const user = db.users.find(u => u.id === userId);
+    if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
+
+    db.themes = themes;
+    
+    db.auditLogs.unshift({
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      action: "THEMES_UPDATED",
+      details: `Admin updated visual theme presets.`,
+      severity: "INFO"
+    });
+    res.json(db.themes);
+  });
+
   router.get("/admin/system", (req, res) => {
     const { userId } = req.query;
     const user = db.users.find(u => u.id === userId);
     if (!user || user.role !== "ADMIN") return res.status(403).json({ error: "Forbidden: Admin only" });
-    res.json({ users: db.users, transactions: db.transactions, auditLogs: db.auditLogs });
+    res.json({ users: db.users, transactions: db.transactions, auditLogs: db.auditLogs, tiers: db.tiers, themes: db.themes });
   });
 
   router.post("/admin/system", (req, res) => {

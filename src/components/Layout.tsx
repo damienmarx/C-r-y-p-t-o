@@ -9,6 +9,36 @@ export function Layout() {
   const { user, login, logout } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [globalThemes, setGlobalThemes] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/system?userId=admin-1") // Hack to just fetch public themes, but let's assume we can fetch anonymously or using system endpoint. Actually, we have GET /api/themes.
+      .catch();
+      
+    fetch("/api/themes")
+      .then(res => res.json())
+      .then(data => setGlobalThemes(data))
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!user || !globalThemes.length) {
+       // Reset to default
+       document.documentElement.style.setProperty("--accent-gold", "#C5A059");
+       document.documentElement.style.setProperty("--bg-dark", "#0A0B0D");
+       return;
+    }
+    const theme = globalThemes.find(t => t.id === user.theme || t.name === user.theme);
+    if (theme) {
+       document.documentElement.style.setProperty("--accent-gold", theme.primary);
+       document.documentElement.style.setProperty("--bg-dark", theme.bg);
+       document.documentElement.style.setProperty("--color-gold", theme.primary);
+    } else {
+       document.documentElement.style.setProperty("--accent-gold", "#C5A059");
+       document.documentElement.style.setProperty("--bg-dark", "#0A0B0D");
+       document.documentElement.style.setProperty("--color-gold", "#C5A059");
+    }
+  }, [user?.theme, globalThemes]);
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: Activity },

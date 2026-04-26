@@ -5,9 +5,9 @@ import { ShieldAlert, AlertTriangle, Key, Users, Activity, Terminal, Database, S
 
 export function Admin() {
   const { user } = useAuth();
-  const [systemData, setSystemData] = useState<{ logs: any[], users: any[], transactions: any[] } | null>(null);
+  const [systemData, setSystemData] = useState<{ logs: any[], users: any[], transactions: any[], tiers?: any[], themes?: any[] } | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<"TRANSCRIPTION" | "USERS" | "INFRA" | "MARKETS">("TRANSCRIPTION");
+  const [activeTab, setActiveTab] = useState<"TRANSCRIPTION" | "USERS" | "INFRA" | "MARKETS" | "TIERS" | "THEMES">("TRANSCRIPTION");
   const [infraData, setInfraData] = useState<any>(null);
   const [marketData, setMarketData] = useState<Record<string, number>>({});
   const [newAsset, setNewAsset] = useState({ asset: "", price: "" });
@@ -20,7 +20,7 @@ export function Admin() {
     setUnauthorized(false);
     fetch(`/api/admin/system?userId=${user.id}`)
       .then(r => r.json())
-      .then(d => setSystemData({ logs: d.auditLogs || [], users: d.users || [], transactions: d.transactions || [] }))
+      .then(d => setSystemData({ logs: d.auditLogs || [], users: d.users || [], transactions: d.transactions || [], tiers: d.tiers || [], themes: d.themes || [] }))
       .catch(e => console.error(e));
 
     fetch(`/api/admin/infrastructure?userId=${user.id}`)
@@ -67,6 +67,26 @@ export function Admin() {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: user.id })
+    });
+    if (res.ok) fetchSystemData();
+  };
+
+  const handleSaveTiers = async () => {
+    if (!user || !systemData?.tiers) return;
+    const res = await fetch("/api/admin/tiers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, tiers: systemData.tiers })
+    });
+    if (res.ok) fetchSystemData();
+  };
+
+  const handleSaveThemes = async () => {
+    if (!user || !systemData?.themes) return;
+    const res = await fetch("/api/admin/themes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, themes: systemData.themes })
     });
     if (res.ok) fetchSystemData();
   };
@@ -124,7 +144,19 @@ export function Admin() {
           onClick={() => setActiveTab("MARKETS")}
           className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "MARKETS" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-white shadow-[0_-5px_15px_rgba(255,255,255,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
         >
-          <div className="flex items-center gap-2"><Activity className="w-4 h-4" /> Global Liquidity Pools</div>
+          <div className="flex items-center gap-2"><Activity className="w-4 h-4" /> Global Liquidity</div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("TIERS")}
+          className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "TIERS" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-[#C5A059] shadow-[0_-5px_15px_rgba(197,160,89,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
+        >
+          <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Custom Ranks</div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("THEMES")}
+          className={`flex-shrink-0 snap-start px-4 md:px-6 py-3 rounded-t-lg transition-all text-[10px] md:text-xs font-serif uppercase tracking-widest ${activeTab === "THEMES" ? "bg-card/80 backdrop-blur-xl border border-[#1F2937] border-b-0 text-[#C5A059] shadow-[0_-5px_15px_rgba(197,160,89,0.05)]" : "text-[#6B7280] hover:text-[#9CA3AF]"}`}
+        >
+          <div className="flex items-center gap-2"><Terminal className="w-4 h-4" /> Global Themes</div>
         </button>
       </div>
 
@@ -183,6 +215,21 @@ export function Admin() {
                          <option value="USER">Base User</option>
                          <option value="ADMIN">Overseer (Admin)</option>
                        </select>
+                     </div>
+
+                     <div className="flex gap-4 mb-4 border-b border-[#1F2937] pb-4">
+                        <div className="flex flex-col">
+                           <span className="text-[10px] uppercase tracking-widest text-[#6B7280] font-mono mb-1">Rank</span>
+                           <span className="text-xs text-[#C5A059] font-bold font-serif">{u.tier || "Unranked"}</span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="text-[10px] uppercase tracking-widest text-[#6B7280] font-mono mb-1">OSRS Main</span>
+                           <span className="text-xs text-white font-mono">{u.osrsUsername || "Not Linked"}</span>
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="text-[10px] uppercase tracking-widest text-[#6B7280] font-mono mb-1">Discord</span>
+                           <span className="text-xs text-[#5865F2] font-mono">{u.discordId || "Not Linked"}</span>
+                        </div>
                      </div>
                      
                      <div className="space-y-4">
@@ -303,6 +350,183 @@ export function Admin() {
                    <div className="text-[#10B981] font-mono text-lg">{formatCurrency(price)}</div>
                  </div>
                ))}
+             </div>
+           </div>
+        )}
+
+        {activeTab === "TIERS" && (
+           <div className="p-6">
+             <div className="flex justify-between items-center mb-6">
+               <div>
+                  <h3 className="text-lg font-serif font-bold text-white tracking-widest">Custom Rank Generation</h3>
+                  <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Define hierarchy of node progression based on volume or manual invite.</p>
+               </div>
+               <button onClick={handleSaveTiers} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+                 <Save className="w-4 h-4"/> Commit Tiers
+               </button>
+             </div>
+             <div className="space-y-4">
+                {systemData?.tiers?.map((tier: any, idx: number) => (
+                   <div key={tier.id} className="bg-[#181B1F] p-4 rounded-xl border border-[#1F2937] flex flex-col md:flex-row gap-4 md:items-end">
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Rank Name</label>
+                        <input 
+                          value={tier.name}
+                          onChange={(e) => {
+                             const newTiers = [...(systemData.tiers || [])];
+                             newTiers[idx].name = e.target.value;
+                             setSystemData({...systemData, tiers: newTiers});
+                          }}
+                          className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-white outline-none focus:border-gold/50 transition font-serif"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Color Aura (Hex)</label>
+                        <input 
+                          value={tier.color}
+                          onChange={(e) => {
+                             const newTiers = [...(systemData.tiers || [])];
+                             newTiers[idx].color = e.target.value;
+                             setSystemData({...systemData, tiers: newTiers});
+                          }}
+                          className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded font-mono text-[10px]"
+                          style={{ color: tier.color }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Requirements</label>
+                        <input 
+                          value={tier.requirements}
+                          onChange={(e) => {
+                             const newTiers = [...(systemData.tiers || [])];
+                             newTiers[idx].requirements = e.target.value;
+                             setSystemData({...systemData, tiers: newTiers});
+                          }}
+                          className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-[#9CA3AF] outline-none font-mono text-xs"
+                        />
+                      </div>
+                      <button 
+                        onClick={() => {
+                           const newTiers = systemData.tiers?.filter((_, i) => i !== idx);
+                           setSystemData({...systemData, tiers: newTiers});
+                        }}
+                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition"
+                      >
+                         <Trash2 className="w-4 h-4" />
+                      </button>
+                   </div>
+                ))}
+                <button 
+                  onClick={() => {
+                     setSystemData({
+                       ...systemData!, 
+                       tiers: [...(systemData?.tiers || []), { id: crypto.randomUUID(), name: "New Rank", color: "#FFFFFF", requirements: "Manual Invite" }]
+                     });
+                  }}
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                >
+                  <Plus className="w-4 h-4"/> Add New Custom Rank
+                </button>
+             </div>
+           </div>
+        )}
+
+        {activeTab === "THEMES" && (
+           <div className="p-6">
+             <div className="flex justify-between items-center mb-6">
+               <div>
+                  <h3 className="text-lg font-serif font-bold text-white tracking-widest">Global Terminal Themes</h3>
+                  <p className="text-[10px] uppercase tracking-widest text-[#9CA3AF] opacity-80">Inject custom aesthetic presets accessible to operators.</p>
+               </div>
+               <button onClick={handleSaveThemes} className="bg-gold/10 hover:bg-gold/20 text-[#C5A059] border border-gold/30 px-6 py-2 rounded text-[10px] uppercase tracking-widest transition flex items-center gap-2">
+                 <Save className="w-4 h-4"/> Commit Themes
+               </button>
+             </div>
+             <div className="space-y-4">
+                {systemData?.themes?.map((theme: any, idx: number) => (
+                   <div key={theme.id} className="bg-[#181B1F] p-4 rounded-xl border border-[#1F2937] flex flex-col md:flex-row gap-4 md:items-end">
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Theme Alias</label>
+                        <input 
+                          value={theme.name}
+                          onChange={(e) => {
+                             const newThemes = [...(systemData.themes || [])];
+                             newThemes[idx].name = e.target.value;
+                             setSystemData({...systemData, themes: newThemes});
+                          }}
+                          className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded text-white outline-none focus:border-gold/50 transition font-serif"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Primary Color</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="color"
+                            value={theme.primary}
+                            onChange={(e) => {
+                               const newThemes = [...(systemData.themes || [])];
+                               newThemes[idx].primary = e.target.value;
+                               setSystemData({...systemData, themes: newThemes});
+                            }}
+                            className="bg-transparent border-none appearance-none cursor-pointer w-8 h-8 rounded shrink-0 p-0"
+                          />
+                          <input 
+                            value={theme.primary}
+                            onChange={(e) => {
+                               const newThemes = [...(systemData.themes || [])];
+                               newThemes[idx].primary = e.target.value;
+                               setSystemData({...systemData, themes: newThemes});
+                            }}
+                            className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded font-mono text-[10px] text-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Background Color</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="color"
+                            value={theme.bg}
+                            onChange={(e) => {
+                               const newThemes = [...(systemData.themes || [])];
+                               newThemes[idx].bg = e.target.value;
+                               setSystemData({...systemData, themes: newThemes});
+                            }}
+                            className="bg-transparent border-none appearance-none cursor-pointer w-8 h-8 rounded shrink-0 p-0"
+                          />
+                          <input 
+                            value={theme.bg}
+                            onChange={(e) => {
+                               const newThemes = [...(systemData.themes || [])];
+                               newThemes[idx].bg = e.target.value;
+                               setSystemData({...systemData, themes: newThemes});
+                            }}
+                            className="w-full bg-[#0A0B0D] border border-[#1F2937] px-4 py-2 rounded font-mono text-[10px] text-white"
+                          />
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                           const newThemes = systemData.themes?.filter((_, i) => i !== idx);
+                           setSystemData({...systemData, themes: newThemes});
+                        }}
+                        className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded border border-red-500/20 transition"
+                      >
+                         <Trash2 className="w-4 h-4" />
+                      </button>
+                   </div>
+                ))}
+                <button 
+                  onClick={() => {
+                     setSystemData({
+                       ...systemData!, 
+                       themes: [...(systemData?.themes || []), { id: crypto.randomUUID(), name: "Custom Variant", primary: "#FFFFFF", bg: "#000000" }]
+                     });
+                  }}
+                  className="w-full border border-dashed border-[#1F2937] text-[#6B7280] hover:text-white hover:border-[#374151] hover:bg-[#181B1F] py-4 rounded transition flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                >
+                  <Plus className="w-4 h-4"/> Add New Theme Preset
+                </button>
              </div>
            </div>
         )}

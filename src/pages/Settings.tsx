@@ -4,14 +4,22 @@ import { User, Key, Bell, Save, Plus, Copy, Eye, EyeOff, Trash2 } from "lucide-r
 import { cn } from "../lib/utils";
 
 export function Settings() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<"ACCOUNT" | "API_KEYS" | "NOTIFICATIONS">("ACCOUNT");
+  const [globalThemes, setGlobalThemes] = useState<any[]>([]);
   
   // Mock Settings State
   const [accountState, setAccountState] = useState({
     email: `${user?.username || 'user'}@osrs-crypto.net`,
     displayName: user?.username || '',
+    osrsUsername: user?.osrsUsername || '',
+    discordId: user?.discordId || '',
+    theme: user?.theme || 'default',
   });
+
+  useEffect(() => {
+     fetch("/api/themes").then(r => r.json()).then(setGlobalThemes).catch();
+  }, []);
 
   const [apiKeys, setApiKeys] = useState<{id: string, name: string, key: string, created: string}[]>([]);
   
@@ -41,8 +49,27 @@ export function Settings() {
     if (activeTab === "API_KEYS") fetchKeys();
   }, [activeTab, fetchKeys]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+    try {
+      const res = await fetch("/api/profile", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           userId: user.id,
+           osrsUsername: accountState.osrsUsername,
+           discordId: accountState.discordId,
+           theme: accountState.theme
+         })
+      });
+      if (res.ok) {
+        const updatedUser = await res.json();
+        updateUser(updatedUser);
+      }
+    } catch(e) {
+      console.error(e);
+    }
     alert("Configuration state saved securely.");
   };
 
@@ -140,6 +167,36 @@ export function Settings() {
                 onChange={e => setAccountState({...accountState, email: e.target.value})}
                 className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono" 
               />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">OSRS Character Name</label>
+              <input 
+                value={accountState.osrsUsername} 
+                onChange={e => setAccountState({...accountState, osrsUsername: e.target.value})}
+                className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-serif"
+                placeholder="e.g. Zezima"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Discord Username (for Syndicate Roles)</label>
+              <input 
+                value={accountState.discordId} 
+                onChange={e => setAccountState({...accountState, discordId: e.target.value})}
+                className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-[#5865F2]/50 transition font-mono"
+                placeholder="e.g. username#1234"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest text-[#6B7280] mb-2 font-mono">Terminal Theme</label>
+              <select 
+                value={accountState.theme}
+                onChange={e => setAccountState({...accountState, theme: e.target.value})}
+                className="w-full bg-[#181B1F] border border-[#1F2937] px-4 py-3 rounded text-white outline-none focus:border-gold/50 transition font-mono"
+              >
+                {globalThemes.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
             </div>
             <button type="submit" className="flex items-center gap-2 border border-gold text-[#C5A059] bg-[#C5A059]/5 hover:bg-[#C5A059]/10 font-serif tracking-widest px-6 py-3 rounded transition uppercase text-[10px]">
               <Save className="w-4 h-4" /> Commit Identity Changes
